@@ -1,7 +1,8 @@
 import * as THREE from "https://esm.sh/three";
 import { VRButton } from "https://esm.sh/three/examples/jsm/webxr/VRButton.js";
+// Importar XRControllerModelFactory para visualizar los controladores
 import { XRControllerModelFactory } from "https://esm.sh/three/examples/jsm/webxr/XRControllerModelFactory.js";
-import { XRHandModelFactory } from "https://esm.sh/three/examples/jsm/webxr/XRHandModelFactory.js"; // No lo usaremos directamente para input pero es buena práctica tenerlo si se usa XRControllerModelFactory
+
 
 const minTileIndex = -8;
 const maxTileIndex = 8;
@@ -14,7 +15,7 @@ let map;
 let scoreDOM, resultDOM, finalScoreDOM, gameControlsDOM;
 let backgroundMusic;
 
-// Declarar variables para los controladores VR
+// Variables para los controladores de VR
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
 
@@ -322,7 +323,7 @@ function Renderer() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
 
-    // Enable WebXR - THIS IS KEY FOR VR
+    // Enable WebXR
     renderer.xr.enabled = true;
 
     return renderer;
@@ -719,45 +720,50 @@ function init() {
     backgroundMusic = document.getElementById("backgroundMusic");
 
 
-    // Configuración de los controladores VR
+    // --- Configuración de controladores de VR ---
     const controllerModelFactory = new XRControllerModelFactory();
-    // const handModelFactory = new XRHandModelFactory(); // No es necesario si solo se usan los modelos de controlador
 
-    // Controlador 1 (generalmente mano derecha)
+    // Controlador 1 (mano izquierda)
     controller1 = renderer.xr.getController(0);
-    scene.add(controller1);
-
-    controllerGrip1 = renderer.xr.getControllerGrip(0);
-    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    scene.add(controllerGrip1);
-
-    // Controlador 2 (generalmente mano izquierda)
-    controller2 = renderer.xr.getController(1);
-    scene.add(controller2);
-
-    controllerGrip2 = renderer.xr.getControllerGrip(1);
-    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-    scene.add(controllerGrip2);
-
-    // Añadir listeners para los controladores
+    // Añadir listener para cuando el controlador esté conectado
     controller1.addEventListener('connected', function (event) {
-        console.log('Controller 1 connected:', event.data);
-        this.gamepad = event.data.gamepad; // Accede al objeto gamepad
-        // Puedes agregar más lógica aquí si necesitas un rayo de puntería u otros elementos visuales
+        this.gamepad = event.data.gamepad; // Acceder al Gamepad API para inputs
+        // Opcional: mostrar un modelo del controlador
+        const grip = renderer.xr.getControllerGrip(0);
+        grip.add(controllerModelFactory.createControllerModel(this));
+        scene.add(grip);
+        controllerGrip1 = grip; // Guardar referencia al grip
+        console.log("Controller 1 connected:", event.data);
     });
-    controller2.addEventListener('connected', function (event) {
-        console.log('Controller 2 connected:', event.data);
-        this.gamepad = event.data.gamepad; // Accede al objeto gamepad
-    });
-
+    // Añadir listener para cuando el controlador se desconecte
     controller1.addEventListener('disconnected', function () {
-        console.log('Controller 1 disconnected');
-        this.gamepad = null; // Limpiar referencia al gamepad
+        if (controllerGrip1) {
+            scene.remove(controllerGrip1);
+            controllerGrip1 = null;
+        }
+        console.log("Controller 1 disconnected");
+    });
+    scene.add(controller1); // Añadir el objeto del controlador a la escena
+
+    // Controlador 2 (mano derecha)
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('connected', function (event) {
+        this.gamepad = event.data.gamepad; // Acceder al Gamepad API para inputs
+        const grip = renderer.xr.getControllerGrip(1);
+        grip.add(controllerModelFactory.createControllerModel(this));
+        scene.add(grip);
+        controllerGrip2 = grip; // Guardar referencia al grip
+        console.log("Controller 2 connected:", event.data);
     });
     controller2.addEventListener('disconnected', function () {
-        console.log('Controller 2 disconnected');
-        this.gamepad = null; // Limpiar referencia al gamepad
+        if (controllerGrip2) {
+            scene.remove(controllerGrip2);
+            controllerGrip2 = null;
+        }
+        console.log("Controller 2 disconnected");
     });
+    scene.add(controller2); // Añadir el objeto del controlador a la escena
+    // --- Fin de configuración de controladores de VR ---
 
 
     // Event listener for VR session start/end to toggle controls
@@ -773,13 +779,13 @@ function init() {
         if (backgroundMusic) backgroundMusic.pause();
     });
 
-    // Control buttons for movement (still active)
+    // Control buttons for movement
     document.getElementById("forward")?.addEventListener("click", () => queueMove("forward"));
     document.getElementById("backward")?.addEventListener("click", () => queueMove("backward"));
     document.getElementById("left")?.addEventListener("click", () => queueMove("left"));
     document.getElementById("right")?.addEventListener("click", () => queueMove("right"));
 
-    // Keyboard controls as fallback/alternative (still active)
+    // Keyboard controls as fallback/alternative (still useful for development)
     window.addEventListener("keydown", (event) => {
         if (event.key === "ArrowUp") {
             event.preventDefault();
@@ -800,7 +806,6 @@ function init() {
 
     initializeGame();
 
-    // Start the animation loop for WebXR
     renderer.setAnimationLoop(animate);
 }
 
@@ -814,6 +819,8 @@ function initializeGame() {
         backgroundMusic.currentTime = 0;
         if (renderer.xr.isPresenting) {
             backgroundMusic.play();
+        } else {
+            // Consider adding a user-initiated "Start Game" button for desktop to play audio
         }
     }
 
@@ -821,6 +828,11 @@ function initializeGame() {
 }
 
 function animate() {
+    // Manejar input de controladores de VR si la sesión VR está activa
+    if (renderer.xr.isPresenting) {
+        handleXRControllerInput();
+    }
+
     animateVehicles();
     animatePlayer();
     hitTest();
@@ -829,7 +841,7 @@ function animate() {
     const playerWorldPosition = new THREE.Vector3();
     player.getWorldPosition(playerWorldPosition);
 
-    // Third-person camera position relative to the player (for 2D view)
+    // Third-person camera position relative to the player
     const cameraOffsetX = 0;
     const cameraOffsetY = -150;
     const cameraOffsetZ = 100;
@@ -840,7 +852,7 @@ function animate() {
         playerWorldPosition.z + cameraOffsetZ
     );
 
-    // Make the camera look slightly ahead and slightly down from the player (for 2D view)
+    // Make the camera look slightly ahead and slightly down from the player
     const lookAtOffsetX = 0;
     const lookAtOffsetY = 50;
     const lookAtOffsetZ = -20;
@@ -851,56 +863,55 @@ function animate() {
         playerWorldPosition.z + lookAtOffsetZ
     );
 
-    // --- Manejo de entrada de los controladores de VR ---
-    if (renderer.xr.isPresenting) { // Solo procesar inputs de VR si estamos en una sesión VR
-        // Mover el player para que la cámara VR siempre esté centrada en él
-        // La cámara (del visor) se moverá con el jugador.
-        // Asegúrate de que el 'player' es el objeto que realmente representa el origen del movimiento en el mundo VR
-        
-        // La cámara WebXR ya sigue la cabeza del usuario, así que no necesitamos modificar camera.position ni camera.lookAt aquí.
-        // Lo que hacemos es mover el objeto 'player' en el mundo 3D en base a la entrada del controlador.
-        
-        // Usaremos el controller1 (asumiendo que es el controlador de la mano principal, e.g., derecha)
-        if (controller1 && controller1.gamepad) {
-            const gamepad = controller1.gamepad;
+    renderer.render(scene, camera);
+}
 
-            // En Meta Quest 3, los thumbsticks suelen ser axes[2] y axes[3] para el controlador primario
-            // Y-axis (vertical) para adelante/atrás
-            // X-axis (horizontal) para izquierda/derecha
-            const thumbstickX = gamepad.axes[2]; 
-            const thumbstickY = gamepad.axes[3]; 
+// --- Nueva función para manejar el input de los controladores de XR ---
+function handleXRControllerInput() {
+    // Definir un umbral para detectar un movimiento significativo del joystick
+    const joystickThreshold = 0.5;
 
-            const threshold = 0.5; // Ajusta este valor para la sensibilidad del thumbstick
+    // Solo un movimiento a la vez para evitar saltos.
+    // Si ya hay movimientos en cola, los joysticks no deberían añadir más.
+    if (movesQueue.length > 0) return;
 
-            // Movimiento hacia adelante/atrás
-            if (thumbstickY < -threshold) { // Thumbstick empujado hacia arriba
-                queueMove("forward");
-            } else if (thumbstickY > threshold) { // Thumbstick empujado hacia abajo
-                queueMove("backward");
-            }
+    // Verificar el controlador de la mano izquierda (controller1)
+    if (controller1 && controller1.gamepad) {
+        const axes = controller1.gamepad.axes;
+        // axes[2] es el eje X del joystick (izquierda/derecha)
+        // axes[3] es el eje Y del joystick (arriba/abajo)
 
-            // Movimiento lateral
-            if (thumbstickX < -threshold) { // Thumbstick empujado hacia la izquierda
-                queueMove("left");
-            } else if (thumbstickX > threshold) { // Thumbstick empujado hacia la derecha
-                queueMove("right");
-            }
-            
-            // Ejemplo de mapeo de botones (Meta Quest 3):
-            // Botón 'A' o 'X' (suele ser el botón primario del controlador derecho/izquierdo)
-            // if (gamepad.buttons[4] && gamepad.buttons[4].pressed) { // índice 4 a menudo es el thumbstick click
-            //     console.log("Thumbstick click!");
-            // }
-
-            // Gatillo (botón índice 0)
-            // if (gamepad.buttons[0] && gamepad.buttons[0].pressed) {
-            //     console.log("Gatillo presionado!");
-            // }
+        if (axes[3] < -joystickThreshold) { // Joystick hacia adelante
+            queueMove("forward");
+        } else if (axes[3] > joystickThreshold) { // Joystick hacia atrás
+            queueMove("backward");
+        } else if (axes[2] < -joystickThreshold) { // Joystick hacia la izquierda
+            queueMove("left");
+        } else if (axes[2] > joystickThreshold) { // Joystick hacia la derecha
+            queueMove("right");
         }
     }
 
-    renderer.render(scene, camera);
+    // Opcional: Puedes hacer lo mismo para el controlador de la mano derecha (controller2)
+    // si quieres que ambos puedan controlar el movimiento, o solo uno.
+    // Por simplicidad, este ejemplo solo usa el controlador 1.
+    // Si quieres que el controlador 2 también mueva al jugador:
+    /*
+    if (controller2 && controller2.gamepad) {
+        const axes = controller2.gamepad.axes;
+        if (axes[3] < -joystickThreshold) {
+            queueMove("forward");
+        } else if (axes[3] > joystickThreshold) {
+            queueMove("backward");
+        } else if (axes[2] < -joystickThreshold) {
+            queueMove("left");
+        } else if (axes[2] > joystickThreshold) {
+            queueMove("right");
+        }
+    }
+    */
 }
+// --- Fin de la nueva función ---
 
 // Initialize the Three.js scene and game
 init();
