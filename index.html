@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gallina Turuleca VR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #1a1a1a; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #vr-button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        #game-controls {
+            position: absolute;
+            bottom: 80px; /* Adjust based on VR button */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+            /* Hide by default, show only in VR or specific conditions */
+            visibility: hidden;
+        }
+        #game-controls.active {
+            visibility: visible;
+        }
+        #game-controls button {
+            background-color: #6366f1; /* Indigo 500 */
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        #game-controls button:hover {
+            background-color: #4f46e5; /* Indigo 600 */
+        }
+        #result-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            z-index: 200;
+            visibility: hidden; /* Hidden by default */
+        }
+        #result-container h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #fca311; /* Amber */
+        }
+        #result-container p {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        #result-container button {
+            background-color: #10b981; /* Emerald 500 */
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+        #result-container button:hover {
+            background-color: #059669; /* Emerald 600 */
+        }
+        /* Styles from the second CSS block (combined and adjusted) */
+        @import url("https://fonts.googleapis.com/css?family=Press+Start+2P");
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 2em;
+            color: white;
+            z-index: 100; /* Ensure score is above other elements */
+        }
+    </style>
+</head>
+<body>
+    <audio id="backgroundMusic" loop autoplay>
+        <source src="./carnoise.mp3" type="audio/mpeg">
+        Tu navegador no soporta la reproducción de audio.
+    </audio>
+    <canvas class="game"></canvas>
+
+    <div id="vr-button-container"></div>
+
+    <div id="game-controls">
+        <button id="forward">Forward</button>
+        <button id="left">Left</button>
+        <button id="backward">Backward</button>
+        <button id="right">Right</button>
+    </div>
+
+    <div id="result-container">
+        <div id="result">
+            <h1>Game Over</h1>
+            <p>Your score: <span id="final-score"></span></p>
+            <button id="retry">Retry</button>
+        </div>
+    </div>
+    
+    <div id="score">0</div>
+
+    <script type="module" src="./script.js"></script>
+</body>
+</html>

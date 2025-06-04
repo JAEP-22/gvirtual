@@ -1,0 +1,176 @@
+@import url("[https://fonts.googleapis.com/css?family=Press+Start+2P](https://fonts.googleapis.com/css?family=Press+Start+2P)");
+
+body {
+    margin: 0;
+    display: flex;
+    font-family: "Press Start 2P", cursive;
+    overflow: hidden; /* Prevent scrolling */
+}
+
+canvas.game {
+    display: block;
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    background-color: #87ceeb; /* Sky blue background */
+}
+
+#ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks to pass through to canvas */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10; /* Ensure it's above the canvas */
+}
+
+#score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 2em;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    pointer-events: auto; /* Allow interaction if needed, though hidden in VR */
+}
+
+#result-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden; /* Hidden by default */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+    pointer-events: auto; /* Allow interaction with retry button */
+}
+
+#result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+    text-align: center;
+}
+
+#result h1 {
+    font-size: 2.5em;
+    color: #a52523;
+    margin-bottom: 15px;
+}
+
+#result p {
+    font-size: 1.2em;
+    color: #333;
+    margin-bottom: 25px;
+}
+
+#result button {
+    background-color: #4CAF50; /* Green retry button */
+    color: white;
+    padding: 15px 30px;
+    font-family: inherit;
+    font-size: 1.1em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 3px 5px 0px 0px rgba(0, 0, 0, 0.4);
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+#result button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+#result button:active {
+    transform: translateY(1px);
+    box-shadow: 1px 2px 0px 0px rgba(0, 0, 0, 0.4);
+}
+
+#enter-vr-button-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+
+#enter-vr-button {
+    background-color: #007bff; /* Blue button */
+    color: white;
+    padding: 15px 30px;
+    font-family: "Press Start 2P", cursive;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 3px 5px 0px 0px rgba(0, 0, 0, 0.4);
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+#enter-vr-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+#enter-vr-button:active {
+    transform: translateY(1px);
+    box-shadow: 1px 2px 0px 0px rgba(0, 0, 0, 0.4);
+}
+```javascript
+import * as THREE from "https://esm.sh/three";
+import { XRButton } from 'https://esm.sh/three/examples/jsm/webxr/XRButton.js'; // Helper for WebXR button
+
+// --- Game Constants ---
+const minTileIndex = -8;
+const maxTileIndex = 8;
+const tilesPerRow = maxTileIndex - minTileIndex + 1;
+const tileSize = 42;
+
+// --- Textures for vehicles ---
+// Helper function to create a CanvasTexture
+function Texture(width, height, rects) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = "rgba(0,0,0,0.6)";
+    rects.forEach((rect) => {
+        context.fillRect(rect.x, rect.y, rect.w, rect.h);
+    });
+    return new THREE.CanvasTexture(canvas);
+}
+
+const carFrontTexture = new Texture(40, 80, [{ x: 0, y: 10, w: 30, h: 60 }]);
+const carBackTexture = new Texture(40, 80, [{ x: 10, y: 10, w: 30, h: 60 }]);
+const carRightSideTexture = new Texture(110, 40, [
+    { x: 10, y: 0, w: 50, h: 30 },
+    { x: 70, y: 0, w: 30, h: 30 },
+]);
+const carLeftSideTexture = new Texture(110, 40, [
+    { x: 10, y: 10, w: 50, h: 30 },
+    { x: 70, y: 10, w: 30, h: 30 },
+]);
+
+const truckFrontTexture = Texture(30, 30, [
+    { x: 5, y: 0, w: 10, h: 30 },
+]);
+const truckRightSideTexture = Texture(25, 30, [
+    { x: 15, y: 5, w: 10, h: 10 },
+]);
+const truckLeftSideTexture = Texture(25, 30, [
+    { x: 15, y: 15, w: 10, h: 10 },
+]);
