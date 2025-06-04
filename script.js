@@ -792,11 +792,10 @@ function animate() {
     player.getWorldPosition(playerWorldPosition);
     
     // Third-person camera position relative to the player
-    // The camera is placed behind and slightly above the player.
     // These values are tuned to provide a good third-person view without needing to look up.
-    const cameraOffsetX = -90; // No horizontal offset from player
-    const cameraOffsetY = 0; // Camera is 150 units behind the player (along the Y-axis, as Y is forward in your game)
-    const cameraOffsetZ = 0; // Camera is 100 units above the player (along the Z-axis)
+    const cameraOffsetX = 0; // No horizontal offset from player
+    const cameraOffsetY = -150; // Camera is 150 units behind the player (along the Y-axis, as Y is forward in your game)
+    const cameraOffsetZ = 100; // Camera is 100 units above the player (along the Z-axis)
 
     camera.position.set(
         playerWorldPosition.x + cameraOffsetX,
@@ -804,9 +803,18 @@ function animate() {
         playerWorldPosition.z + cameraOffsetZ
     );
 
-    // Make the camera look at the player's position
-    camera.lookAt(playerWorldPosition.x, playerWorldPosition.y, playerWorldPosition.z + 20); // Look slightly above the player's base to center the view
+    // Make the camera look slightly ahead and slightly down from the player
+    // lookAtOffsetY: Un valor positivo hará que la cámara mire más hacia adelante en el camino.
+    // lookAtOffsetZ: Un valor negativo hará que la cámara mire ligeramente hacia abajo.
+    const lookAtOffsetX = 0; // Mantener la vista centrada horizontalmente
+    const lookAtOffsetY = 50; // Mirar 50 unidades más adelante del jugador
+    const lookAtOffsetZ = -20; // Mirar 20 unidades por debajo de la altura del jugador
 
+    camera.lookAt(
+        playerWorldPosition.x + lookAtOffsetX,
+        playerWorldPosition.y + lookAtOffsetY,
+        playerWorldPosition.z + lookAtOffsetZ
+    );
 
     renderer.render(scene, camera);
 }
